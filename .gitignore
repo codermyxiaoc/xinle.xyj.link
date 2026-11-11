@@ -1,0 +1,37 @@
+# Local accounts, settings and fetched data
+.env*
+!.env.example
+/config/
+/output/
+
+# Installed dependencies and package-manager caches
+node_modules/
+/.pnpm-store/
+/.pnpm-cache/
+/.pnpm-state/
+/.cache/
+
+# Generated executables and build intermediates
+/build/
+/dist/
+*.exe
+*.msi
+*.zip
+*.7z
+# Retired .NET launcher; the current application uses Electron
+/packaging/Launcher/
+
+# Logs, reports and temporary test output
+*.log
+*.tmp
+*.tsbuildinfo
+coverage/
+test-results/
+playwright-report/
+blob-report/
+
+# Local editor / OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

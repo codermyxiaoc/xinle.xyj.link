@@ -1,0 +1,41 @@
+.refresh-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:488px;max-width:100%;align-items:stretch;gap:10px}
+.refresh-actions>button{width:100%;height:46px;padding:0 12px}
+.account-config-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 16px;border:1px solid #d7e2db;border-radius:9px;background:#fff;color:#3f6655;font:600 13px "Segoe UI","Microsoft YaHei",sans-serif;white-space:nowrap;transition:background .18s,border-color .18s}
+.account-config-button svg{width:18px;height:18px;flex-shrink:0}
+.account-config-button:hover{background:#edf5ef;border-color:#a8c7b7}
+.account-dialog{width:min(450px,calc(100vw - 32px));max-height:calc(100dvh - 40px);overflow:auto;padding:29px;border:1px solid #e0e7e2;border-radius:18px;background:#fff;color:#20362f;box-shadow:0 24px 80px #15362730}
+.account-dialog::backdrop{background:#182d2459;backdrop-filter:blur(3px)}
+.account-dialog-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.account-eyebrow{font-size:9px;font-weight:600;letter-spacing:2px;color:#8d9d93}
+.account-dialog h2{font-size:24px;line-height:1.4;font-weight:600;letter-spacing:-.4px;margin:8px 0 0}
+.account-close{display:grid;place-items:center;flex-shrink:0;width:30px;height:30px;padding:0;margin:-4px -5px 0 0;border:0;border-radius:7px;background:transparent;color:#95a299;font:27px/1 sans-serif}
+.account-close:hover{background:#f0f4f1;color:#526c5d}
+.account-description{font-size:12px;color:#849288;line-height:1.9;margin:13px 0 24px}
+.account-fields{display:grid;gap:19px}
+.account-field{display:block;min-width:0}
+.account-field>span{display:block;font-size:13px;font-weight:500;color:#4c6255;margin-bottom:8px}
+.account-field input{display:block;min-width:0;width:100%;height:45px;border:1px solid #dce5de;border-radius:8px;padding:10px 12px;background:#fcfdfc;color:#294434;font:14px "Segoe UI","Microsoft YaHei",sans-serif;outline:none;transition:border-color .18s,box-shadow .18s}
+.account-field input::placeholder{color:#a5afa8;font-size:12px}
+.account-field input:focus{border-color:#7caa94;box-shadow:0 0 0 3px #b7d9c633;background:#fff}
+.account-field input:disabled{background:#f4f6f4;color:#98a39b}
+.account-field small{display:block;font-size:11px;line-height:1.7;color:#99a49d;margin-top:8px}
+.account-password-wrap{position:relative}
+.account-password-wrap input{padding-right:61px}
+.account-password-toggle{position:absolute;right:8px;top:8px;height:29px;padding:0 8px;border:0;border-radius:5px;background:transparent;color:#688d77;font-size:11px}
+.account-password-toggle:hover{background:#ecf3ee}
+.account-password-toggle:disabled{color:#aab5ad}
+.account-feedback{font-size:12px;line-height:1.75;margin-top:20px;padding:11px 13px;border:1px solid #e7ece8;border-radius:8px;background:#f6f9f6;color:#7b8d80;overflow-wrap:anywhere}
+.account-feedback.is-error{background:#fff5ef;border-color:#f0dfd0;color:#ac7653}
+.account-feedback.is-success{background:#eef7f1;border-color:#d5e8db;color:#427b59}
+.account-retry{border:0;border-bottom:1px solid #b9cfc0;background:transparent;color:#58836b;padding:4px 0;margin-top:10px;font-size:12px}
+.account-dialog-footer{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:28px;padding-top:21px;border-top:1px solid #edf1ee}
+.account-cancel,.account-save{min-width:88px;border-radius:8px;padding:11px 17px;font-size:13px;font-weight:500}
+.account-cancel{border:1px solid #dfe7e1;background:#fff;color:#7a8a7e}
+.account-cancel:hover{background:#f6f8f6}
+.account-save{border:1px solid #165e4e;background:#165e4e;color:#fff;min-width:102px}
+.account-save:hover{background:#114b3e}
+.account-dialog button:disabled{cursor:wait;opacity:.55}
+@media(max-width:820px){.hero{flex-wrap:wrap}.refresh-panel{margin-left:auto}.refresh-actions{gap:8px}}
+@media(max-width:580px){.refresh-panel{display:block;margin-left:0}.refresh-actions{justify-content:flex-start;gap:10px}.refresh-panel .updated-at{margin-top:10px;max-width:none}.account-config-button{padding:11px 13px;font-size:12px}.account-config-button svg{width:16px;height:16px}.account-dialog{padding:23px 21px;border-radius:15px}.account-dialog h2{font-size:22px}.account-description{font-size:12px;margin-bottom:20px}.account-dialog-footer{margin-top:24px;padding-top:19px}}
+@media(max-width:580px){.refresh-panel{width:100%}.refresh-actions{width:100%;gap:8px}.refresh-actions>button{padding:0 6px;gap:6px;font-size:12px;white-space:nowrap}}
+@media(max-width:400px){.refresh-actions>button{font-size:11px;gap:4px}.refresh-actions>button svg{display:none}}

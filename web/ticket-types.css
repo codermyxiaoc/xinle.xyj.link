@@ -1,0 +1,29 @@
+.ticket-types-dialog{width:min(820px,calc(100vw - 32px));padding:27px 29px;overflow:hidden}
+.ticket-types-dialog form{display:flex;flex-direction:column;max-height:calc(100dvh - 98px);min-height:0}
+.ticket-types-dialog .account-description{margin-bottom:18px;flex-shrink:0}
+.ticket-types-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;flex-shrink:0}
+.ticket-types-toolbar .account-field{flex:1;max-width:400px}
+.ticket-types-toolbar .account-field>span.ticket-types-search-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.ticket-types-toolbar input{height:40px;font-size:12px}
+.ticket-types-count{font-size:11px;color:#8b9a91;white-space:nowrap}
+.ticket-types-list{overflow-y:auto;overscroll-behavior:contain;min-height:100px;max-height:52dvh;padding:0 8px 0 0;scrollbar-width:thin;scrollbar-color:#cddbd1 transparent}
+.ticket-type-row{min-width:0;margin:0;padding:16px 0;border:0;border-bottom:1px solid #edf1ee;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 20px;align-items:center}
+.ticket-type-row:last-child{border-bottom:0}
+.ticket-type-row legend{float:left;grid-column:1/-1;width:100%;padding:0;font-size:13px;color:#345245;font-weight:550;line-height:1.8;overflow-wrap:anywhere}
+.ticket-type-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 13px;font-size:11px;color:#97a39b;line-height:1.8;min-width:0}
+.ticket-type-local{color:#53836b;background:#edf5ef;padding:2px 7px;border-radius:4px}
+.ticket-type-local.is-remote{color:#8c9991;background:#f4f6f4}
+.ticket-type-choice{display:flex;gap:3px;padding:3px;border:1px solid #e0e8e2;border-radius:8px;background:#f6f8f6;flex-shrink:0}
+.ticket-type-option{position:relative;display:block;cursor:pointer}
+.ticket-type-option input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.ticket-type-option span{display:block;min-width:66px;padding:8px 9px;text-align:center;border-radius:5px;color:#87968c;font-size:11px;line-height:1.4;white-space:nowrap;transition:background .15s,color .15s,box-shadow .15s}
+.ticket-type-option input:checked+span{background:#fff;color:#165e4e;font-weight:600;box-shadow:0 1px 4px #183b241a}
+.ticket-type-option input:focus-visible+span{outline:3px solid #80b7a6;outline-offset:1px}
+.ticket-type-option input:disabled+span{opacity:.55;cursor:wait}
+.ticket-types-empty{padding:31px 14px;text-align:center;font-size:12px;line-height:1.9;color:#8b9b90}
+.ticket-types-dialog .account-feedback{margin-top:13px;flex-shrink:0}
+.ticket-types-dialog .account-retry{align-self:flex-start}
+.ticket-types-dialog .account-dialog-footer{margin-top:17px;padding-top:17px;flex-shrink:0}
+.ticket-types-pending{margin-right:auto;color:#91a097;font-size:11px;line-height:1.7}
+.local-ticket-type-label{background:#edf5ef;border-radius:3px;color:#56816b;padding:2px 5px}
+@media(max-width:580px){.ticket-types-dialog{padding:23px 20px}.ticket-types-dialog form{max-height:calc(100dvh - 88px)}.ticket-types-dialog .account-description{font-size:11px;margin:11px 0 15px}.ticket-types-toolbar{gap:10px}.ticket-types-count{font-size:10px}.ticket-type-row{grid-template-columns:minmax(0,1fr);gap:9px;padding:15px 0}.ticket-type-row legend{font-size:12px}.ticket-type-choice{justify-content:stretch}.ticket-type-option{flex:1}.ticket-type-option span{padding:8px 5px;min-width:0}.ticket-types-dialog .account-dialog-footer{gap:8px}.ticket-types-dialog .account-cancel,.ticket-types-dialog .account-save{min-width:74px;padding:10px 13px}.ticket-types-pending{font-size:10px;max-width:110px}}

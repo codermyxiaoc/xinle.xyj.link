@@ -1,0 +1,10 @@
+{
+  "name": "xinle-price-dashboard",
+  "version": "1.2.0",
+  "description": "每日票价渠道价格看板",
+  "productName": "每日票价",
+  "main": "main.cjs",
+  "author": "Xinle Price Dashboard",
+  "license": "ISC",
+  "private": true
+}
