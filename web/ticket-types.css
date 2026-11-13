@@ -1,6 +1,10 @@
 .ticket-types-dialog{width:min(820px,calc(100vw - 32px));padding:27px 29px;overflow:hidden}
 .ticket-types-dialog form{display:flex;flex-direction:column;max-height:calc(100dvh - 98px);min-height:0}
 .ticket-types-dialog .account-description{margin-bottom:18px;flex-shrink:0}
+.ticket-types-destinations{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-bottom:16px;flex-shrink:0;min-width:0}
+.ticket-types-destinations>span{font-size:12px;color:#7b8b81}
+.ticket-types-destinations .destination-tabs{align-self:flex-start}
+.ticket-types-destinations button:disabled{opacity:.55}
 .ticket-types-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;flex-shrink:0}
 .ticket-types-toolbar .account-field{flex:1;max-width:400px}
 .ticket-types-toolbar .account-field>span.ticket-types-search-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
@@ -27,3 +31,10 @@
 .ticket-types-pending{margin-right:auto;color:#91a097;font-size:11px;line-height:1.7}
 .local-ticket-type-label{background:#edf5ef;border-radius:3px;color:#56816b;padding:2px 5px}
 @media(max-width:580px){.ticket-types-dialog{padding:23px 20px}.ticket-types-dialog form{max-height:calc(100dvh - 88px)}.ticket-types-dialog .account-description{font-size:11px;margin:11px 0 15px}.ticket-types-toolbar{gap:10px}.ticket-types-count{font-size:10px}.ticket-type-row{grid-template-columns:minmax(0,1fr);gap:9px;padding:15px 0}.ticket-type-row legend{font-size:12px}.ticket-type-choice{justify-content:stretch}.ticket-type-option{flex:1}.ticket-type-option span{padding:8px 5px;min-width:0}.ticket-types-dialog .account-dialog-footer{gap:8px}.ticket-types-dialog .account-cancel,.ticket-types-dialog .account-save{min-width:74px;padding:10px 13px}.ticket-types-pending{font-size:10px;max-width:110px}}
+.ticket-type-row{grid-template-columns:minmax(0,1fr);gap:10px}
+.ticket-type-destination{flex-basis:100%;color:#688171}
+.ticket-type-choice{justify-self:start;flex-wrap:wrap;max-width:100%}
+.ticket-type-needs-setting{margin:0;font-size:11px;line-height:1.8;color:#a28757;overflow-wrap:anywhere}
+.ticket-type-option span{min-width:80px}
+.ticket-types-count{white-space:normal;text-align:right;line-height:1.7}
+@media(max-width:580px){.ticket-type-choice{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}.ticket-type-option span{min-width:0;white-space:normal}.ticket-types-toolbar{align-items:flex-start;flex-direction:column;gap:7px}.ticket-types-toolbar .account-field{width:100%;max-width:none}.ticket-types-count{text-align:left}.ticket-type-needs-setting{font-size:10px}}

@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import type { buildPriceExport } from "./ticket-prices.ts";
+import { TICKET_GROUPS, TICKET_GROUP_LABELS, type buildPriceExport } from "./ticket-prices.ts";
 
 type PriceExport = ReturnType<typeof buildPriceExport>;
 export type PersistablePriceExport = PriceExport & {
@@ -14,7 +14,7 @@ export type PersistablePriceExport = PriceExport & {
   };
 };
 
-const groups = ["adult", "children", "other"] as const;
+const groups = TICKET_GROUPS;
 const filenames = {
   main: "ticket-prices.json",
   byDate: "prices-by-date.json",
@@ -62,7 +62,10 @@ function validate(result: PersistablePriceExport) {
     if (!isObject(product) || String(product.goodsId) !== id || !isCount(product.goodsId) ||
         product.goodsId === 0 || typeof product.name !== "string" ||
         typeof product.spotName !== "string" || typeof product.ticketType !== "string" ||
-        !groups.includes(product.group)) {
+        !groups.includes(product.group) ||
+        ![1, 1.5, null].includes(product.visitDays) ||
+        typeof product.destinationKey !== "string" || !product.destinationKey ||
+        typeof product.destinationName !== "string") {
       throw new Error(`商品 ${id} 的元数据不完整，不能保存。`);
     }
   }
@@ -106,10 +109,10 @@ function csvCell(value: unknown) {
 
 function toCsv(result: PersistablePriceExport) {
   const rows = [
-    ["商品ID", "票种", "商品名称", "景区", "日期", "日历价_元", "平台价_元", "门市价_元", "valid", "stock", "纳入价格表"],
+    ["商品ID", "票种", "分类", "游玩天数", "旅游地区ID", "商品名称", "旅游地区", "日期", "日历价_元", "平台价_元", "门市价_元", "valid", "stock", "纳入价格表"],
     ...result.rows.map((row) => [
-      row.goodsId, row.ticketType, result.products[row.goodsId].name,
-      result.products[row.goodsId].spotName, row.date, row.mallPrice,
+      row.goodsId, row.ticketType, TICKET_GROUP_LABELS[row.group], row.visitDays, row.destinationKey,
+      result.products[row.goodsId].name, result.products[row.goodsId].destinationName, row.date, row.mallPrice,
       row.b2bPrice, row.marketPrice, row.valid, row.stock, row.includedInPrices,
     ]),
   ];

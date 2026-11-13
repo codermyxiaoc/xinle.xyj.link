@@ -15,7 +15,7 @@
 <body>
   <header class="topbar">
     <a class="brand" href="/" aria-label="每日票价首页"><span class="brand-mark" aria-hidden="true">票</span><span>每日票价<small>PRICE OBSERVATORY</small></span></a>
-    <div class="topbar-right"><span class="local-pill"><i></i>本地价格看板</span><a class="download-link" href="/api/download" download="ticket-prices.json">导出 JSON <span aria-hidden="true">↗</span></a></div>
+    <div class="topbar-right"><span class="local-pill"><i></i>本地价格看板</span><div class="export-controls"><a class="download-link" href="/api/download" download="ticket-prices.json">导出 JSON <span aria-hidden="true">↗</span></a><button class="excel-export-button" id="excel-export-button" type="button" title="导出全部已保存的地区、渠道和日期，不受当前筛选影响" aria-label="导出 Excel，包含全部已保存的地区、渠道和日期">导出 Excel</button><p class="excel-export-feedback" id="excel-export-feedback" role="status" aria-live="polite" hidden></p></div></div>
   </header>
   <main class="shell">
     <section class="hero">
@@ -27,20 +27,25 @@
     <div class="error-banner" id="error-banner" role="alert" hidden></div>
 
     <section class="summary-grid" aria-label="价格概览">
-      <article class="summary-card"><span class="summary-label">在售渠道</span><div><strong id="channel-count">—</strong><span class="stat-unit">个</span></div><small id="channel-detail">成人与儿童独立统计</small></article>
-      <article class="summary-card"><span class="summary-label">已收录日期</span><div><strong id="date-count">—</strong><span class="stat-unit">天</span></div><small id="date-range">等待价格数据</small></article>
-      <article class="summary-card"><span class="summary-label"><i class="type-dot adult-dot"></i>成人最低报价</span><div class="price-stat"><span>¥</span><strong id="adult-lowest">—</strong></div><small class="selection-caption">当前筛选日期内</small></article>
-      <article class="summary-card"><span class="summary-label"><i class="type-dot child-dot"></i>儿童最低报价</span><div class="price-stat child-price"><span>¥</span><strong id="children-lowest">—</strong></div><small class="selection-caption">当前筛选日期内</small></article>
+      <article class="summary-card"><span class="summary-label">当前筛选渠道</span><div><strong id="channel-count">—</strong><span class="stat-unit">个</span></div><small id="channel-detail">按地区与票种统计</small></article>
+      <article class="summary-card"><span class="summary-label">当前筛选日期</span><div><strong id="date-count">—</strong><span class="stat-unit">天</span></div><small id="date-range">等待价格数据</small></article>
+      <article class="summary-card"><span class="summary-label"><i class="type-dot adult-dot"></i>1日成人最低报价</span><div class="price-stat"><span>¥</span><strong id="adult_1d-lowest">—</strong></div><small class="selection-caption">当前地区与筛选日期内</small></article>
+      <article class="summary-card"><span class="summary-label"><i class="type-dot child-dot"></i>1日儿童最低报价</span><div class="price-stat child-price"><span>¥</span><strong id="children_1d-lowest">—</strong></div><small class="selection-caption">当前地区与筛选日期内</small></article>
+      <article class="summary-card"><span class="summary-label"><i class="type-dot adult-dot"></i>1.5日成人最低报价</span><div class="price-stat"><span>¥</span><strong id="adult_1_5d-lowest">—</strong></div><small class="selection-caption">当前地区与筛选日期内</small></article>
+      <article class="summary-card"><span class="summary-label"><i class="type-dot child-dot"></i>1.5日儿童最低报价</span><div class="price-stat child-price"><span>¥</span><strong id="children_1_5d-lowest">—</strong></div><small class="selection-caption">当前地区与筛选日期内</small></article>
     </section>
 
     <section class="comparison-section" aria-labelledby="comparison-heading">
-      <div class="section-heading"><div><p class="eyebrow">DAILY COMPARISON</p><h2 id="comparison-heading">每日渠道比价</h2></div><p class="sort-note"><span aria-hidden="true">↗</span> 各票种按价格从低到高排序</p></div>
+      <div class="section-heading"><div><p class="eyebrow">DAILY COMPARISON</p><h2 id="comparison-heading">每日渠道比价</h2></div><div class="comparison-view-controls"><div id="view-mode" class="segmented view-mode" role="group" aria-label="显示方式"><button type="button" data-view="list" class="active" aria-pressed="true">列表方式</button><button type="button" data-view="calendar" aria-pressed="false">日期方式</button></div><p class="sort-note"><span aria-hidden="true">↗</span> 同一地区、同一票种内按价格排序</p></div></div>
       <div class="filter-bar">
+        <div class="destination-filter-row"><span id="destination-filter-label">旅游地区</span><div class="segmented destination-tabs" id="destination-filter" role="group" aria-labelledby="destination-filter-label"><button type="button" data-destination="" aria-pressed="true" class="active">全部地区</button></div></div>
         <div class="filter-selects"><label for="month-filter">月份<select id="month-filter" aria-label="选择月份"><option value="">加载中</option></select></label><label for="date-filter">游玩日期<select id="date-filter" aria-label="选择游玩日期"><option value="">当月全部日期</option></select></label></div>
-        <div class="segmented" role="group" aria-label="筛选票种"><button type="button" data-type="all" class="active" aria-pressed="true">全部票种</button><button type="button" data-type="adult" aria-pressed="false">成人票</button><button type="button" data-type="children" aria-pressed="false">儿童票</button></div>
+        <div class="segmented" role="group" aria-label="筛选票种"><button type="button" data-type="all" class="active" aria-pressed="true">全部票种</button><button type="button" data-type="adult_1d" aria-pressed="false">1日成人</button><button type="button" data-type="children_1d" aria-pressed="false">1日儿童</button><button type="button" data-type="adult_1_5d" aria-pressed="false">1.5日成人</button><button type="button" data-type="children_1_5d" aria-pressed="false">1.5日儿童</button><button type="button" data-type="other" aria-pressed="false">待设置</button></div>
       </div>
       <details class="data-notice" id="data-notice" hidden><summary><span aria-hidden="true">ⓘ</span><span id="notice-title">数据说明</span><span class="notice-action">查看详情</span></summary><ul id="notice-list"></ul></details>
-      <div class="results-line"><span id="results-count">正在加载每日价格…</span><span>价格单位：人民币 / 张</span></div>
+      <div class="results-line"><span id="results-count">正在加载每日价格…</span><span>价格单位：人民币</span></div>
+      <div id="calendar-view" class="calendar-view" hidden></div>
+      <div id="calendar-selection" class="calendar-selection" hidden></div>
       <div id="daily-list" class="daily-list" aria-live="polite"><div class="loading-state"><span class="loader"></span><p>正在整理渠道报价…</p></div></div>
     </section>
     <footer class="footer"><span>每个产品编号对应一个报价渠道，预订条件请以渠道说明为准。</span><span>展示最近一次保存的报价 · 刷新成功后自动更新</span></footer>
@@ -61,8 +66,9 @@
   <dialog class="account-dialog ticket-types-dialog" id="ticket-types-dialog" aria-labelledby="ticket-types-heading" aria-describedby="ticket-types-description">
     <form id="ticket-types-form">
       <header class="account-dialog-header"><div><span class="account-eyebrow">TICKET TYPE SETTINGS</span><h2 id="ticket-types-heading">票种设置</h2></div><button class="account-close" id="ticket-types-close" type="button" aria-label="关闭票种设置">×</button></header>
-      <p class="account-description" id="ticket-types-description">按渠道实际适用人群设置成人票或儿童票。保存后立即用于比价，再次刷新价格也会保留；选择「跟随接口」可恢复原票种。</p>
-      <div class="ticket-types-toolbar"><label class="account-field" for="ticket-types-search"><span class="ticket-types-search-label">查找渠道</span><input id="ticket-types-search" type="search" placeholder="搜索渠道名称或编号" autocomplete="off"></label><span id="ticket-types-count" class="ticket-types-count" aria-live="polite"></span></div>
+      <p class="account-description" id="ticket-types-description">按渠道实际游玩时长和适用人群，设置为1日或1.5日成人、儿童票。无法确认的渠道会标为「待设置」。本地设置保存后立即生效，再次刷新也会保留；选择「跟随接口」可恢复自动识别。</p>
+      <div class="ticket-types-destinations"><span id="ticket-types-destination-label">旅游地区</span><div class="segmented destination-tabs" id="ticket-types-destination-filter" role="group" aria-labelledby="ticket-types-destination-label"></div></div>
+      <div class="ticket-types-toolbar"><label class="account-field" for="ticket-types-search"><span class="ticket-types-search-label">查找渠道</span><input id="ticket-types-search" type="search" placeholder="搜索渠道名称、编号或旅游地区" autocomplete="off"></label><span id="ticket-types-count" class="ticket-types-count" aria-live="polite"></span></div>
       <div class="ticket-types-list" id="ticket-types-list" aria-label="渠道票种设置"></div>
       <div class="account-feedback" id="ticket-types-feedback" role="status" aria-live="polite" hidden></div>
       <button class="account-retry" id="ticket-types-retry" type="button" hidden>重新读取票种</button>

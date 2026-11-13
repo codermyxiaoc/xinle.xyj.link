@@ -1,7 +1,15 @@
 "use strict";
 
 const $ = (selector) => document.querySelector(selector);
-const state = { data: null, month: "", date: "", type: "all", refreshing: false, pollTimer: null, lastCompletion: null };
+const state = { data: null, destination: null, month: "", date: "", type: "all", view: "list", refreshing: false, pollTimer: null, lastCompletion: null };
+const ticketGroups = {
+  adult_1d: { name: "1日成人", audience: "adult", icon: "成" },
+  children_1d: { name: "1日儿童", audience: "children", icon: "童" },
+  adult_1_5d: { name: "1.5日成人", audience: "adult", icon: "成" },
+  children_1_5d: { name: "1.5日儿童", audience: "children", icon: "童" },
+  other: { name: "待设置", audience: "other", icon: "?" },
+};
+const classifiedGroups = Object.keys(ticketGroups).filter((group) => group !== "other");
 let pricesRequestRevision = 0;
 const money = (value) => Number(value).toFixed(2);
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
@@ -184,13 +192,47 @@ async function request(url, options = {}) {
 function rows() {
   return (state.data?.rows || []).filter((row) => Number.isFinite(Number(row.mallPrice)) && row.mallPrice !== null && /^\d{4}-\d{2}-\d{2}$/.test(row.date));
 }
-function allDates() { return [...new Set(rows().map((row) => row.date))].sort(); }
+function productFor(row) { return state.data?.products?.[String(row.goodsId)] || row; }
+function destinationFor(product) {
+  const spotId = product?.spotId;
+  const name = product?.destinationName || product?.spotName || "未标注地区";
+  const key = product?.destinationKey || (Number.isSafeInteger(Number(spotId)) && Number(spotId) > 0 ? `spot:${spotId}` : product?.spotName ? `name:${product.spotName}` : "unknown");
+  return { key, name };
+}
+function groupFor(product) { return Object.hasOwn(ticketGroups, product?.group) ? product.group : "other"; }
+function matchesFilters(product) {
+  return (!state.destination || destinationFor(product).key === state.destination) && (state.type === "all" || groupFor(product) === state.type);
+}
+function scopedRows() { return rows().filter((row) => matchesFilters(productFor(row))); }
+function scopedProducts() { return Object.values(state.data?.products || {}).filter(matchesFilters); }
+function destinations() {
+  const result = new Map();
+  for (const product of Object.values(state.data?.products || {})) { const destination = destinationFor(product); result.set(destination.key, destination); }
+  return [...result.values()];
+}
+function allDates() { return [...new Set(scopedRows().map((row) => row.date))].sort(); }
 function filteredDates() { return allDates().filter((date) => date.startsWith(state.month) && (!state.date || date === state.date)); }
 function priceAvailable(row) { return row.valid === 1 && row.includedInPrices === true && row.stock !== 0; }
-function conflict(product) { return product?.ticketTypeSource !== "local" && (product?.ticketType === "CHILDREN" && product.name?.includes("成人") || product?.ticketType === "ADULT" && product.name?.includes("儿童")); }
 function currentDate() { return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
 
 function populateFilters() {
+  const places = destinations();
+  if (state.destination === null || (state.destination && !places.some((place) => place.key === state.destination))) {
+    state.destination = places.find((place) => place.name === "北京环球度假区")?.key ?? (places.length ? "" : null);
+  }
+  const destinationFilter = $("#destination-filter");
+  const focusedDestination = destinationFilter.contains(document.activeElement) ? document.activeElement.dataset.destination : undefined;
+  destinationFilter.replaceChildren(...[{ key: "", name: "全部地区" }, ...places].map((place) => {
+    const selected = place.key === (state.destination ?? "");
+    const button = element("button", selected ? "active" : "", place.name);
+    button.type = "button";
+    button.dataset.destination = place.key;
+    button.setAttribute("aria-pressed", String(selected));
+    return button;
+  }));
+  if (focusedDestination !== undefined) {
+    [...destinationFilter.children].find((button) => button.dataset.destination === focusedDestination)?.focus({ preventScroll: true });
+  }
   const dates = allDates();
   const months = [...new Set(dates.map((date) => date.slice(0, 7)))];
   if (!months.includes(state.month)) state.month = months.includes(currentDate().slice(0, 7)) ? currentDate().slice(0, 7) : months[0] || "";
@@ -213,20 +255,20 @@ function populateFilters() {
 }
 
 function renderSummary(dates) {
-  const products = Object.values(state.data?.products || {});
-  const adultCount = products.filter((product) => product.group === "adult").length;
-  const childCount = products.filter((product) => product.group === "children").length;
+  const products = scopedProducts();
+  const pending = products.filter((product) => groupFor(product) === "other").length;
   $("#channel-count").textContent = String(products.length);
-  $("#channel-detail").textContent = `成人 ${adultCount} 个 · 儿童 ${childCount} 个`;
-  $("#date-count").textContent = String(allDates().length);
-  const range = allDates();
+  $("#channel-detail").textContent = `${products.length - pending} 个已分类 · ${pending} 个待设置`;
+  $("#date-count").textContent = String(dates.length);
+  const range = dates;
   $("#date-range").textContent = range.length ? `${range[0].replaceAll("-", ".")} — ${range.at(-1).replaceAll("-", ".")}` : "尚无价格日期";
-  for (const group of ["adult", "children"]) {
-    const values = rows().filter((row) => row.group === group && dates.includes(row.date) && priceAvailable(row)).map((row) => Number(row.mallPrice));
+  for (const group of classifiedGroups) {
+    const values = state.destination ? scopedRows().filter((row) => groupFor(productFor(row)) === group && dates.includes(row.date) && priceAvailable(row)).map((row) => Number(row.mallPrice)) : [];
     $(`#${group}-lowest`).textContent = values.length ? money(Math.min(...values)) : "—";
   }
-  const destinations = [...new Set(products.map((product) => product.spotName).filter(Boolean))];
-  $("#destination").textContent = destinations.length ? `${destinations.join(" / ")} · 成人与儿童分开比较，找到当天更合适的报价。` : "成人与儿童分开比较，找到当天更合适的报价。";
+  for (const caption of document.querySelectorAll(".selection-caption")) caption.textContent = state.destination ? "当前地区与筛选日期内" : "选择旅游地区后查看最低价";
+  const place = destinations().find((item) => item.key === state.destination);
+  $("#destination").textContent = `${place ? place.name : "按旅游地区分别展示"} · 按游玩时长与成人、儿童独立比较。`;
   const fetchedAt = state.data?.fetchedAt;
   $("#updated-at").textContent = fetchedAt && Number.isFinite(Date.parse(fetchedAt)) ? `最后更新 ${dateFormatter.format(new Date(fetchedAt))}` : "尚无已保存的价格";
 }
@@ -235,15 +277,15 @@ function renderNotices() {
   const warnings = (state.data?.warnings || []).map((warning) => {
     const id = String(warning).match(/商品 (\d+)/)?.[1];
     const product = id && state.data?.products?.[id];
+    if (product && !matchesFilters(product)) return null;
     if (product?.ticketTypeSource === "local" && (/ticket_type=.*冲突/.test(warning) || /票种 .*未归入成人\/儿童/.test(warning))) return null;
-    if (product && conflict(product)) return `渠道 #${id} 标注为${product.group === "children" ? "儿童票" : "成人票"}，但产品名称为“${product.name}”，请预订前核对适用人群。`;
     if (/stock=0/.test(warning)) return `渠道 #${id || "未知"} 存在暂无库存的日期，已在报价旁标注。`;
     if (/valid=/.test(warning)) return `渠道 #${id || "未知"} 存在状态待确认的日期，请核对可预订状态。`;
     return String(warning);
   }).filter(Boolean);
   if (state.data?.collectionStatus === "partial") warnings.unshift("当前为部分渠道数据，部分渠道未能更新。请手动刷新后再比较。");
-  const other = Object.values(state.data?.products || {}).filter((product) => product.group === "other");
-  if (other.length) warnings.push(`${other.length} 个渠道的票种无法归入成人或儿童，已保留在导出数据中，请核对票种。`);
+  const other = scopedProducts().filter((product) => groupFor(product) === "other");
+  if (other.length) warnings.push(`${other.length} 个渠道的游玩时长或适用人群待确认，已列入「待设置」，不参与四类票种的价格排名。可在「票种设置」中逐一指定。`);
   $("#data-notice").hidden = !warnings.length;
   $("#notice-title").textContent = `${warnings.length} 项数据说明 · 比价前请留意票种与适用条件`;
   $("#notice-list").replaceChildren(...warnings.map((warning) => element("li", "", warning)));
@@ -256,42 +298,54 @@ function channelLabel(product) {
   return "渠道报价";
 }
 
-function renderTicketCard(date, group) {
-  const name = group === "adult" ? "成人票" : "儿童票";
-  const card = element("section", `ticket-card ${group}-card`);
+function configureTicket(goodsId) { window.dispatchEvent(new CustomEvent("open-ticket-types", { detail: { goodsId } })); }
+
+function settingsButton(goodsId, label = "设置票种") {
+  const button = element("button", "pending-type-action", label);
+  button.type = "button";
+  button.setAttribute("aria-haspopup", "dialog");
+  button.addEventListener("click", () => configureTicket(goodsId));
+  return button;
+}
+
+function renderTicketCard(date, group, destination) {
+  const { name, audience, icon } = ticketGroups[group];
+  const isPending = group === "other";
+  const card = element("section", `ticket-card ${audience}-card`);
   card.dataset.group = group;
-  card.setAttribute("aria-label", `${date} ${name}价格排序`);
-  const records = rows().filter((row) => row.date === date && row.group === group).sort((a, b) => Number(a.mallPrice) - Number(b.mallPrice) || Number(a.goodsId) - Number(b.goodsId));
+  card.dataset.destination = destination.key;
+  card.setAttribute("aria-label", `${date} ${destination.name} ${name}${isPending ? "渠道" : "价格排序"}`);
+  const records = scopedRows().filter((row) => row.date === date && groupFor(productFor(row)) === group && destinationFor(productFor(row)).key === destination.key).sort((a, b) => isPending ? Number(a.goodsId) - Number(b.goodsId) : Number(a.mallPrice) - Number(b.mallPrice) || Number(a.goodsId) - Number(b.goodsId));
   const available = records.filter(priceAvailable);
   const lowest = available.length ? Number(available[0].mallPrice) : null;
   const header = element("div", "ticket-header");
   const title = element("h3", "ticket-title");
-  title.append(element("span", "type-icon", group === "adult" ? "成" : "童"), document.createTextNode(name), element("span", "channel-counter", `${records.length} 个渠道`));
-  header.append(title, element("span", "price-order-label", "价格 ↑"));
+  title.append(element("span", "type-icon", icon), document.createTextNode(name), element("span", "channel-counter", `${records.length} 个渠道`));
+  header.append(title, element("span", "price-order-label", isPending ? "确认票种后参与比价" : "价格 ↑"));
   card.append(header);
   if (!records.length) { card.append(element("div", "no-tickets", "当天暂无该票种报价")); return card; }
   const list = element("ol", "channel-list");
   for (const row of records) {
     const product = state.data.products[String(row.goodsId)] || {};
     const availableRow = priceAvailable(row);
-    const rank = availableRow ? available.filter((entry) => Number(entry.mallPrice) < Number(row.mallPrice)).length + 1 : null;
-    const best = availableRow && Number(row.mallPrice) === lowest;
-    const item = element("li", `channel-row${best ? " is-best" : ""}${availableRow ? "" : " is-unavailable"}`);
+    const rank = !isPending && availableRow ? available.filter((entry) => Number(entry.mallPrice) < Number(row.mallPrice)).length + 1 : null;
+    const best = !isPending && availableRow && Number(row.mallPrice) === lowest;
+    const item = element("li", `channel-row${best ? " is-best" : ""}${availableRow || isPending ? "" : " is-unavailable"}`);
     item.dataset.goodsId = String(row.goodsId);
     item.dataset.price = String(row.mallPrice);
     item.dataset.rank = rank === null ? "" : String(rank);
     item.append(element("span", `rank-number${best ? " rank-first" : ""}`, rank === null ? "—" : String(rank).padStart(2, "0")));
     const info = element("div", "channel-info");
-    const fullTitle = product.name ? `${product.name}-${row.goodsId}` : `渠道-${row.goodsId}`;
+    const fullTitle = product.name ? product.name.endsWith(`-${row.goodsId}`) ? product.name : `${product.name}-${row.goodsId}` : `渠道-${row.goodsId}`;
     const heading = element("p", "channel-title", fullTitle);
     info.append(heading, element("p", "channel-name", channelLabel(product)));
     const status = element("div", "channel-status");
-    if (row.valid !== 1 || row.includedInPrices !== true) status.append(element("span", "availability-warning", "当前不可预订"));
+    if (row.valid !== 1 || (!isPending && row.includedInPrices !== true)) status.append(element("span", "availability-warning", "当前不可预订"));
     else if (row.stock === 0) status.append(element("span", "availability-warning", "暂无库存"));
     else if (Number.isInteger(row.stock) && row.stock > 0) status.append(element("span", "", `库存 ${row.stock}`));
     else status.append(element("span", "", "库存未标注"));
-    if (product.ticketTypeSource === "local") status.append(element("span", "local-ticket-type-label", `本地设为${product.group === "adult" ? "成人" : "儿童"}`));
-    else if (conflict(product)) status.append(element("span", "conflict-label", "票种需核对"));
+    if (product.ticketTypeSource === "local") status.append(element("span", "local-ticket-type-label", `本地设为${ticketGroups[groupFor(product)].name}`));
+    if (isPending) status.append(settingsButton(row.goodsId));
     info.append(status);
     const price = element("div", "channel-price");
     price.append(element("span", "currency", "¥"), element("strong", "", money(row.mallPrice)));
@@ -315,10 +369,144 @@ function renderDay(date) {
   dayline.append(element("span", "date-number", date.slice(8)), element("span", `date-weekday${/六|日/.test(weekday) ? " weekend" : ""}`, weekday));
   aside.append(dayline);
   if (date === currentDate()) aside.append(element("span", "today-label", "今天"));
-  const cards = element("div", `day-tickets${state.type === "all" ? "" : " single-type"}`);
-  for (const group of state.type === "all" ? ["adult", "children"] : [state.type]) cards.append(renderTicketCard(date, group));
-  section.append(aside, cards);
+  const places = element("div", "day-destinations");
+  for (const destination of destinations().filter((place) => !state.destination || place.key === state.destination)) {
+    const records = scopedRows().filter((row) => row.date === date && destinationFor(productFor(row)).key === destination.key);
+    if (!records.length) continue;
+    const place = element("section", "destination-section");
+    place.dataset.destination = destination.key;
+    place.append(element("h3", "destination-heading", destination.name));
+    const cards = element("div", `day-tickets${state.type === "all" ? "" : " single-type"}`);
+    const groups = state.type === "all" ? [...classifiedGroups, ...(records.some((row) => groupFor(productFor(row)) === "other") ? ["other"] : [])] : [state.type];
+    for (const group of groups) cards.append(renderTicketCard(date, group, destination));
+    place.append(cards);
+    places.append(place);
+  }
+  section.append(aside, places);
   return section;
+}
+
+function changeCalendarMonth(direction) {
+  const months = [...new Set(allDates().map((date) => date.slice(0, 7)))];
+  const next = months[months.indexOf(state.month) + direction];
+  if (!next) return;
+  state.month = next;
+  state.date = "";
+  render();
+}
+
+function renderPriceCalendar(destination, group, records) {
+  const { name, audience, icon } = ticketGroups[group];
+  const calendar = element("section", `price-calendar ${audience}-calendar`);
+  calendar.dataset.group = group;
+  calendar.dataset.destination = destination.key;
+  calendar.setAttribute("aria-label", `${destination.name} ${name} ${state.month} 每日最低价`);
+  const header = element("header", "calendar-card-header");
+  const title = element("h4", "");
+  title.append(element("span", "type-icon", icon), document.createTextNode(name));
+  header.append(title, element("span", "calendar-card-caption", "每日最低价"));
+  const weekdays = element("div", "calendar-weekdays");
+  weekdays.setAttribute("aria-hidden", "true");
+  for (const [index, day] of ["日", "一", "二", "三", "四", "五", "六"].entries()) weekdays.append(element("span", index === 0 || index === 6 ? "is-weekend" : "", day));
+  const grid = element("div", "calendar-days");
+  const dailyMinimums = new Map();
+  for (const row of records) {
+    if (groupFor(productFor(row)) !== group || !priceAvailable(row)) continue;
+    const price = Number(row.mallPrice);
+    const previous = dailyMinimums.get(row.date);
+    if (previous === undefined || price < previous) dailyMinimums.set(row.date, price);
+  }
+  const monthMinimum = dailyMinimums.size ? Math.min(...dailyMinimums.values()) : null;
+  const [year, month] = state.month.split("-").map(Number);
+  const firstWeekday = new Date(`${state.month}-01T00:00:00Z`).getUTCDay();
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const blank = () => {
+    const cell = element("span", "calendar-blank");
+    cell.setAttribute("aria-hidden", "true");
+    return cell;
+  };
+  for (let index = 0; index < firstWeekday; index++) grid.append(blank());
+  for (let number = 1; number <= daysInMonth; number++) {
+    const date = `${state.month}-${String(number).padStart(2, "0")}`;
+    const price = dailyMinimums.get(date);
+    const available = price !== undefined;
+    const day = element("button", "calendar-day");
+    day.type = "button";
+    day.dataset.date = date;
+    day.disabled = !available;
+    day.classList.toggle("has-price", available);
+    day.classList.toggle("is-today", date === currentDate());
+    day.classList.toggle("is-selected", date === state.date);
+    day.classList.toggle("is-month-lowest", available && price === monthMinimum);
+    day.setAttribute("aria-pressed", String(date === state.date));
+    if (date === currentDate()) day.setAttribute("aria-current", "date");
+    const weekday = (firstWeekday + number - 1) % 7;
+    day.append(element("span", `calendar-day-number${weekday === 0 || weekday === 6 ? " is-weekend" : ""}`, date === currentDate() ? "今天" : number));
+    if (available) {
+      day.dataset.price = String(price);
+      day.append(element("span", "calendar-day-price", `¥${money(price)}`));
+      day.setAttribute("aria-label", `${date} ${destination.name} ${name} 最低 ${money(price)} 元，查看当天渠道报价`);
+      day.addEventListener("click", () => {
+        state.date = date;
+        render();
+        const heading = $("#calendar-selection h3");
+        heading?.focus({ preventScroll: true });
+        $("#calendar-selection").scrollIntoView({ block: "start", behavior: "smooth" });
+      });
+    } else {
+      day.append(element("span", "calendar-day-empty", "暂无"));
+      day.setAttribute("aria-label", `${date} ${destination.name} ${name} 暂无可预订报价`);
+    }
+    grid.append(day);
+  }
+  const trailing = (7 - (firstWeekday + daysInMonth) % 7) % 7;
+  for (let index = 0; index < trailing; index++) grid.append(blank());
+  calendar.append(header, weekdays, grid);
+  return calendar;
+}
+
+function renderCalendar() {
+  const container = $("#calendar-view");
+  container.replaceChildren();
+  if (state.type === "other") {
+    const pending = element("div", "empty-state");
+    pending.append(element("strong", "", "请先确认渠道票种"), element("p", "", "待设置渠道尚不能按票种比较最低价，可先设置票种，或切回列表查看原始报价。"), settingsButton(undefined, "设置票种"));
+    container.append(pending);
+    return;
+  }
+  if (!state.month) {
+    const empty = element("div", "empty-state");
+    empty.append(element("strong", "", "当前筛选下暂无价格日历"), element("p", "", "可切换旅游地区或票种，也可手动刷新获取最新报价。"));
+    container.append(empty);
+    return;
+  }
+  const months = [...new Set(allDates().map((date) => date.slice(0, 7)))];
+  const monthIndex = months.indexOf(state.month);
+  const toolbar = element("div", "calendar-toolbar");
+  const previous = element("button", "calendar-month-prev", "‹");
+  const next = element("button", "calendar-month-next", "›");
+  previous.type = next.type = "button";
+  previous.setAttribute("aria-label", "上个月");
+  next.setAttribute("aria-label", "下个月");
+  previous.disabled = monthIndex <= 0;
+  next.disabled = monthIndex >= months.length - 1;
+  previous.addEventListener("click", () => changeCalendarMonth(-1));
+  next.addEventListener("click", () => changeCalendarMonth(1));
+  toolbar.append(previous, element("h3", "calendar-month-title", `${state.month.slice(0, 4)} 年 ${Number(state.month.slice(5))} 月`), next,
+    element("p", "calendar-help", "点击日期查看当天渠道报价 · 暂无表示没有可预订报价"));
+  container.append(toolbar);
+  const groups = state.type === "all" ? classifiedGroups : [state.type];
+  const monthRows = scopedRows().filter((row) => row.date.startsWith(state.month));
+  for (const destination of destinations().filter((place) => !state.destination || place.key === state.destination)) {
+    const section = element("section", "calendar-destination");
+    section.dataset.destination = destination.key;
+    section.append(element("h3", "destination-heading", destination.name));
+    const cards = element("div", `calendar-cards${groups.length === 1 ? " single-type" : ""}`);
+    const records = monthRows.filter((row) => destinationFor(productFor(row)).key === destination.key);
+    for (const group of groups) cards.append(renderPriceCalendar(destination, group, records));
+    section.append(cards);
+    container.append(section);
+  }
 }
 
 function render() {
@@ -326,11 +514,38 @@ function render() {
   const dates = filteredDates();
   renderSummary(dates);
   renderNotices();
-  $("#results-count").textContent = `共 ${dates.length} 个日期${state.date ? "" : state.month ? ` · ${state.month.slice(0, 4)} 年 ${Number(state.month.slice(5))} 月` : ""}`;
+  const calendarMode = state.view === "calendar";
+  for (const button of document.querySelectorAll("#view-mode [data-view]")) {
+    const selected = button.dataset.view === state.view;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  }
+  $("#calendar-view").hidden = !calendarMode;
+  $("#calendar-selection").hidden = true;
+  $("#calendar-selection").replaceChildren();
+  $("#results-count").textContent = calendarMode && state.month ? `${state.month.slice(0, 4)} 年 ${Number(state.month.slice(5))} 月 · 同一地区、同一票种每日最低价` : `共 ${dates.length} 个日期${state.date ? "" : state.month ? ` · ${state.month.slice(0, 4)} 年 ${Number(state.month.slice(5))} 月` : ""}`;
   const list = $("#daily-list");
+  list.hidden = false;
+  if (calendarMode) {
+    renderCalendar();
+    if (!state.date || state.type === "other") {
+      list.hidden = true;
+      list.replaceChildren();
+      return;
+    }
+    const selection = $("#calendar-selection");
+    const heading = element("h3", "", `${state.date} · 当天渠道报价`);
+    heading.tabIndex = -1;
+    const clear = element("button", "calendar-clear", "清除日期");
+    clear.type = "button";
+    clear.addEventListener("click", () => { state.date = ""; render(); });
+    selection.append(heading, clear);
+    selection.hidden = false;
+  }
   if (!dates.length) {
     const empty = element("div", "empty-state");
-    empty.append(element("strong", "", "暂时没有可比较的价格"), element("p", "", "点击「手动刷新价格」获取最新报价，或尝试其他日期。"));
+    empty.append(element("strong", "", "当前筛选下暂无报价"), element("p", "", "可切换旅游地区、票种或日期，也可手动刷新获取最新报价。"));
+    if (scopedProducts().some((product) => groupFor(product) === "other")) empty.append(settingsButton(undefined, "查看待设置渠道"));
     list.replaceChildren(empty);
   } else list.replaceChildren(...dates.map(renderDay));
 }
@@ -408,6 +623,65 @@ async function refreshPrices() {
   }
 }
 
+async function exportExcel() {
+  const button = $("#excel-export-button");
+  if (button.disabled) return;
+  const feedback = $("#excel-export-feedback");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60_000);
+  const showMessage = (message, isError = false) => {
+    feedback.textContent = message;
+    feedback.hidden = false;
+    feedback.classList.toggle("is-error", isError);
+    feedback.setAttribute("role", isError ? "alert" : "status");
+  };
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  button.textContent = "导出中…";
+  showMessage("正在生成全部已保存数据的 Excel…");
+  try {
+    const response = await fetch("/api/export.xlsx", { cache: "no-store", signal: controller.signal });
+    if (!response.ok) {
+      let message = "暂时无法导出，请稍后重试。";
+      try { const result = await response.json(); message = result.error || result.message || message; } catch { /* 保留可读的错误提示。 */ }
+      throw new Error(message);
+    }
+    const contentType = response.headers.get("content-type") || "";
+    if (!/application\/(?:vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet|octet-stream)/i.test(contentType)) throw new Error("返回的文件格式不正确，请稍后重试。");
+    const file = await response.blob();
+    if (!file.size) throw new Error("返回的文件为空，请稍后重试。");
+    const disposition = response.headers.get("content-disposition") || "";
+    let filename = "渠道每日最低价.xlsx";
+    const encodedFilename = disposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i)?.[1];
+    const plainFilename = disposition.match(/filename\s*=\s*"([^"]+)"/i)?.[1];
+    try { const candidate = encodedFilename ? decodeURIComponent(encodedFilename.trim()) : plainFilename; if (candidate && /\.xlsx$/i.test(candidate)) filename = candidate.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_"); } catch { /* 非法文件名使用默认名称。 */ }
+    const url = URL.createObjectURL(file);
+    const link = element("a");
+    link.href = url;
+    link.download = filename;
+    link.hidden = true;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    // 让浏览器或桌面端的保存对话框先接管数据，再释放临时文件地址。
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    showMessage("已发起下载，请保存 Excel 文件。");
+  } catch (error) {
+    showMessage(error.name === "AbortError" ? "导出超时，请稍后重试。" : `导出失败：${error.message}`, true);
+  } finally {
+    clearTimeout(timeout);
+    button.disabled = false;
+    button.setAttribute("aria-busy", "false");
+    button.textContent = "导出 Excel";
+  }
+}
+
+$("#destination-filter").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-destination]");
+  if (!button || !event.currentTarget.contains(button)) return;
+  state.destination = button.dataset.destination;
+  render();
+});
 $("#month-filter").addEventListener("change", (event) => { state.month = event.target.value; state.date = ""; render(); });
 $("#date-filter").addEventListener("change", (event) => { state.date = event.target.value; render(); });
 for (const button of document.querySelectorAll("[data-type]")) button.addEventListener("click", () => {
@@ -416,6 +690,13 @@ for (const button of document.querySelectorAll("[data-type]")) button.addEventLi
   render();
 });
 $("#refresh-button").addEventListener("click", refreshPrices);
+$("#excel-export-button").addEventListener("click", exportExcel);
+$("#view-mode").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-view]");
+  if (!button || !event.currentTarget.contains(button)) return;
+  state.view = button.dataset.view;
+  render();
+});
 window.addEventListener("ticket-types-saved", () => { void loadPrices(); });
 enhanceFilterSelect($("#month-filter"));
 enhanceFilterSelect($("#date-filter"));

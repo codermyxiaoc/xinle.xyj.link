@@ -3,9 +3,9 @@ import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { resolveRuntimePaths } from "./runtime-paths.ts";
-import type { buildPriceExport, TicketGroup } from "./ticket-prices.ts";
+import { classifyTicket, emptyTicketGroups, productDestination, ticketClassificationWarning, type buildPriceExport, type TicketGroup } from "./ticket-prices.ts";
 
-export type TicketTypeOverride = "adult" | "children";
+export type TicketTypeOverride = Exclude<TicketGroup, "other">;
 export type TicketTypeOverrides = Record<string, TicketTypeOverride>;
 type OverridePatch = Record<string, TicketTypeOverride | null>;
 type PriceSnapshot = ReturnType<typeof buildPriceExport>;
@@ -20,7 +20,7 @@ type AppliedSnapshot<T extends PriceSnapshot> = Omit<T, "products" | "rows"> & {
   sourceWarnings: string[];
 };
 const saveQueues = new Map<string, Promise<void>>();
-const ticketTypes = { adult: "ADULT", children: "CHILDREN" } as const;
+const ticketTypes = { adult_1d: "ADULT", children_1d: "CHILDREN", adult_1_5d: "ADULT", children_1_5d: "CHILDREN" } as const;
 
 function isObject(value: unknown): value is Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
@@ -35,10 +35,12 @@ function validateMapping(value: unknown, allowReset: boolean): OverridePatch {
     if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) {
       throw new Error("票种设置中的渠道 ID 必须是正整数。");
     }
-    if (ticketType !== "adult" && ticketType !== "children" && !(allowReset && ticketType === null)) {
-      throw new Error(`渠道 ${id} 的票种必须是 adult、children${allowReset ? " 或 null（恢复接口）" : ""}。`);
+    // 旧版只有成人/儿童，原有人工设置沿用为 1 日票，不覆盖用户的纠错。
+    const canonical = ticketType === "adult" ? "adult_1d" : ticketType === "children" ? "children_1d" : ticketType;
+    if (!(typeof canonical === "string" && Object.hasOwn(ticketTypes, canonical)) && !(allowReset && canonical === null)) {
+      throw new Error(`渠道 ${id} 的票种必须是 adult_1d、children_1d、adult_1_5d、children_1_5d${allowReset ? " 或 null（恢复自动）" : ""}。`);
     }
-    result[id] = ticketType as TicketTypeOverride | null;
+    result[id] = canonical as TicketTypeOverride | null;
   }
   return result;
 }
@@ -97,46 +99,60 @@ export async function saveTicketTypeOverrides(
 
 function typeWarningGoodsId(warning: string): string | undefined {
   return warning.match(/^商品 ([1-9]\d*) 名称“[\s\S]*”与 ticket_type=\S+ 冲突；按接口显式票种分组，未根据名称更改。$/)?.[1]
-    ?? warning.match(/^商品 ([1-9]\d*) 票种 [\s\S]+ 未归入成人\/儿童，保留在 other。$/)?.[1];
+    ?? warning.match(/^商品 ([1-9]\d*) 票种 [\s\S]+ 未归入成人\/儿童，保留在 other。$/)?.[1]
+    ?? warning.match(/^商品 ([1-9]\d*) 票种待设置：/)?.[1];
 }
 
 /** 只调整分类及其索引；来源字段使已覆盖快照仍可恢复接口分类。 */
 export function applyTicketTypeOverrides<T extends PriceSnapshot>(
   snapshot: T,
-  overrides: TicketTypeOverrides,
+  overrides: TicketTypeOverrides | Record<string, "adult" | "children">,
 ): AppliedSnapshot<T> {
   const mapping = validateMapping(overrides, false) as TicketTypeOverrides;
   const output = structuredClone(snapshot) as AppliedSnapshot<T>;
   const oldPrices = output.prices;
   const oldDayNumbers = output.dayNumbers;
-  output.prices = { adult: {}, children: {}, other: {} };
-  output.dayNumbers = { adult: {}, children: {}, other: {} };
-  output.sourceWarnings = [...(output.sourceWarnings ?? output.warnings ?? [])];
-  const counts = { adult: 0, children: 0, other: 0 };
+  output.prices = emptyTicketGroups(() => ({}));
+  output.dayNumbers = emptyTicketGroups(() => ({}));
+  // 自动分类规则升级时重新生成票种提示；库存、重复记录等原始提示仍保留。
+  output.sourceWarnings = [...(output.sourceWarnings ?? output.warnings ?? [])].filter(warning => !typeWarningGoodsId(warning));
+  const counts = emptyTicketGroups(() => 0);
+  const findIndex = (indexes: Record<string, Record<string, any>>, group: string, id: string) =>
+    indexes?.[group]?.[id] ?? Object.values(indexes ?? {}).find(entries => Object.hasOwn(entries, id))?.[id] ?? {};
 
   for (const [id, product] of Object.entries(output.products)) {
     const currentGroup = product.group;
     product.sourceTicketType ??= product.ticketType;
-    product.sourceGroup ??= currentGroup;
+    const automatic = classifyTicket(product.name, product.sourceTicketType);
+    product.sourceGroup = automatic.group;
     const override = mapping[id];
     product.ticketType = override ? ticketTypes[override] : product.sourceTicketType;
     product.group = override ?? product.sourceGroup;
     product.ticketTypeSource = override ? "local" : "remote";
+    product.visitDays = override ? (override.endsWith("_1_5d") ? 1.5 : 1) : automatic.visitDays;
+    product.classificationReason = override ? null : automatic.reason;
+    Object.assign(product, productDestination(product));
+    if (automatic.group === "other") output.sourceWarnings.push(ticketClassificationWarning(id, automatic.reason));
     counts[product.group]++;
     // 移动已有的日期索引，金额、日期键和无有效价格的空对象均原样保留。
-    output.prices[product.group][id] = oldPrices?.[currentGroup]?.[id] ?? {};
-    output.dayNumbers[product.group][id] = oldDayNumbers?.[currentGroup]?.[id] ?? {};
+    output.prices[product.group][id] = findIndex(oldPrices, currentGroup, id);
+    output.dayNumbers[product.group][id] = findIndex(oldDayNumbers, currentGroup, id);
   }
   for (const row of output.rows) {
     const product = output.products[String(row.goodsId)];
-    row.sourceTicketType ??= row.ticketType;
-    row.sourceGroup ??= row.group;
+    row.sourceTicketType = product.sourceTicketType;
+    row.sourceGroup = product.sourceGroup;
     row.ticketType = product.ticketType;
     row.group = product.group;
     row.ticketTypeSource = product.ticketTypeSource;
+    row.visitDays = product.visitDays;
+    row.destinationKey = product.destinationKey;
+    row.destinationName = product.destinationName;
   }
+  output.schemaVersion = 2;
   output.summary.productCounts = counts;
   output.summary.productCount = Object.keys(output.products).length;
+  output.summary.destinationCount = new Set(Object.values(output.products).map(product => product.destinationKey)).size;
   output.warnings = output.sourceWarnings.filter((warning) => {
     const id = typeWarningGoodsId(warning);
     return !id || !Object.hasOwn(mapping, id);

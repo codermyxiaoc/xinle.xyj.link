@@ -51,7 +51,7 @@ try {
     args: ["--data-root", testRoot], env, timeout: 60_000,
   });
   const page = await application.firstWindow();
-  await page.locator('.children-card .channel-row[data-goods-id="1036"]').waitFor({ state: "visible" });
+  await page.locator('.ticket-card[data-group="other"] .channel-row[data-goods-id="1036"]').waitFor({ state: "visible" });
   activeSession = JSON.parse(await fs.readFile(path.join(testRoot, "session.json"), "utf8"));
   const getPrices = async () => (await fetch(activeSession.url + "/api/prices")).json();
   const measurements = [];
@@ -82,7 +82,7 @@ try {
     assert.equal(await page.locator(".ticket-type-row").count(), 1);
     const row = page.locator('#ticket-types-list [data-goods-id="1036"]');
     assert.match(await row.locator("legend").innerText(), /1036$/);
-    assert.match(await row.locator(".ticket-type-meta").innerText(), /接口票种：儿童票（CHILDREN）/);
+    assert.match(await row.locator(".ticket-type-meta").innerText(), /CHILDREN/);
     return row;
   };
   const saveSettings = async () => {
@@ -93,21 +93,25 @@ try {
   };
   let row = await open1036();
   assert.equal(await row.locator('input[value=""]').isChecked(), true);
-  await row.locator("label").filter({ hasText: /^成人票$/ }).click();
+  for (const group of ["adult_1d", "children_1d", "adult_1_5d", "children_1_5d"]) {
+    assert.equal(await row.locator(`input[value="${group}"]`).count(), 1, `票种设置应支持 ${group}`);
+  }
+  await row.locator("label").filter({ hasText: /^1日成人$/ }).click();
   await saveSettings();
-  assert.equal(await row.locator('input[value="adult"]').isChecked(), true);
+  assert.equal(await row.locator('input[value="adult_1d"]').isChecked(), true);
   await page.screenshot({ path: path.join(buildRoot, "electron-ticket-types-dialog.png") });
   await page.locator("#ticket-types-close").click();
-  const adultRow = page.locator('.adult-card .channel-row[data-goods-id="1036"]');
+  const adultRow = page.locator('.ticket-card[data-group="adult_1d"] .channel-row[data-goods-id="1036"]');
   await adultRow.waitFor({ state: "visible" });
-  assert.equal(await adultRow.locator(".local-ticket-type-label").innerText(), "本地设为成人");
-  assert.equal(await page.locator('.children-card .channel-row[data-goods-id="1036"]').count(), 0);
+  assert.equal(await adultRow.locator(".local-ticket-type-label").innerText(), "本地设为1日成人");
+  assert.equal(await page.locator('.ticket-card[data-group="other"] .channel-row[data-goods-id="1036"]').count(), 0);
   const applied = await getPrices();
-  assert.equal(applied.products["1036"].group, "adult");
+  assert.equal(applied.products["1036"].group, "adult_1d");
+  assert.equal(applied.products["1036"].visitDays, 1);
   assert.equal(applied.products["1036"].sourceTicketType, "CHILDREN");
   assert.equal(applied.summary.priceCount, 3);
   const persisted = JSON.parse(await fs.readFile(path.join(dataDirectory, "output", "ticket-prices.json"), "utf8"));
-  assert.equal(persisted.products["1036"].group, "adult");
+  assert.equal(persisted.products["1036"].group, "adult_1d");
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: path.join(buildRoot, "electron-ticket-types-dashboard.png"), fullPage: true });
 
@@ -115,7 +119,7 @@ try {
   await adultRow.locator(".local-ticket-type-label").waitFor({ state: "visible" });
   assert.equal((await getPrices()).products["1036"].ticketTypeSource, "local");
   const savedMapping = JSON.parse(await fs.readFile(path.join(dataDirectory, "config", "ticket-types.json"), "utf8"));
-  assert.deepEqual(savedMapping.overrides, { "1036": "adult" });
+  assert.deepEqual(savedMapping.overrides, { "1036": "adult_1d" });
 
   // 临时放宽测试窗口最小宽度，以覆盖 390px 窄屏布局，不更改产品的窗口配置。
   await application.evaluate(({ BrowserWindow }) => {
@@ -126,7 +130,7 @@ try {
   await waitFor(async () => (await page.evaluate(() => innerWidth)) <= 400);
   await checkButtonsAndOverflow("narrow");
   row = await open1036();
-  assert.equal(await row.locator('input[value="adult"]').isChecked(), true);
+  assert.equal(await row.locator('input[value="adult_1d"]').isChecked(), true);
   const bounds = await page.locator("#ticket-types-dialog").evaluate((dialog) => {
     const rect = dialog.getBoundingClientRect();
     return { left: rect.left, right: rect.right, viewport: innerWidth, clientWidth: dialog.clientWidth, scrollWidth: dialog.scrollWidth };
@@ -137,15 +141,17 @@ try {
   await row.locator("label").filter({ hasText: /^跟随接口$/ }).click();
   await saveSettings();
   await page.locator("#ticket-types-close").click();
-  const childRow = page.locator('.children-card .channel-row[data-goods-id="1036"]');
-  await childRow.waitFor({ state: "visible" });
-  assert.equal(await childRow.locator(".local-ticket-type-label").count(), 0);
+  const pendingRow = page.locator('.ticket-card[data-group="other"] .channel-row[data-goods-id="1036"]');
+  await pendingRow.waitFor({ state: "visible" });
+  assert.equal(await pendingRow.locator(".local-ticket-type-label").count(), 0);
+  assert.equal(await pendingRow.locator(".pending-type-action").innerText(), "设置票种");
   assert.equal(await page.locator('.adult-card .channel-row[data-goods-id="1036"]').count(), 0);
   const restored = await getPrices();
+  assert.equal(restored.products["1036"].group, "other");
   assert.equal(restored.products["1036"].ticketType, "CHILDREN");
   assert.equal(restored.products["1036"].ticketTypeSource, "remote");
   assert.equal(restored.summary.priceCount, 3);
-  assert.deepEqual(restored.prices.children["1036"], seed.prices.children["1036"]);
+  assert.deepEqual(restored.prices.other["1036"], seed.prices.other["1036"]);
   assert.deepEqual(JSON.parse(await fs.readFile(path.join(dataDirectory, "config", "ticket-types.json"), "utf8")).overrides, {});
   await assert.rejects(fs.access(path.join(dataDirectory, "config", "login.json")), { code: "ENOENT" });
 
@@ -156,8 +162,8 @@ try {
   await assert.rejects(fs.access(path.join(testRoot, "session.json")), { code: "ENOENT" });
   const report = {
     passed: true, electronVersion: activeSession.electronVersion,
-    adultOverride: true, localLabel: true, reloadPersistence: true,
-    resetToSource: true, equalButtons: true, narrowNoOverflow: true,
+    adultOverride: true, fourTicketTypes: true, localLabel: true, reloadPersistence: true,
+    resetToAutomaticPending: true, equalButtons: true, narrowNoOverflow: true,
     credentialsCopied: false, measurements, testRoot, testedAt: new Date().toISOString(),
   };
   await fs.writeFile(path.join(buildRoot, "electron-ticket-types-report.json"), JSON.stringify(report, null, 2));

@@ -4,16 +4,18 @@ import { mkdtemp, writeFile, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { createDashboardServer } from "../server.ts";
+import { buildPriceExport } from "../lib/ticket-prices.ts";
 
 const data = (time: string) => ({
-  fetchedAt: time, collectionStatus: "complete", prices: { adult: {}, children: {}, other: {} },
-  products: {}, rows: [], summary: { productCount: 0 },
+  ...buildPriceExport([], {}, { fetchedAt: time }),
+  collectionStatus: "complete",
+  collection: { requestedProducts: 0, completedProducts: 0, failures: [] },
 });
 
 async function setup(t: any, runner: (report: any) => Promise<void>) {
   const dir = await mkdtemp(path.join(os.tmpdir(), "xinle-dashboard-"));
   await writeFile(path.join(dir, "ticket-prices.json"), JSON.stringify(data("2026-11-11T01:00:00Z")));
-  const server = createDashboardServer({ outputDir: dir, runRefresh: runner });
+  const server = createDashboardServer({ outputDir: dir, configRoot: dir, runRefresh: runner });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address() as { port: number };
   const base = `http://127.0.0.1:${address.port}`;

@@ -43,11 +43,11 @@ const patchrightPackage = JSON.parse(await fs.readFile(path.join(patchrightDir, 
 const browserManifest = JSON.parse(await fs.readFile(path.join(coreDir, "browsers.json"), "utf8"));
 const browser = browserManifest.browsers.find((item) => item.name === "chromium");
 await fs.writeFile(path.join(staging, "package.json"), JSON.stringify({
-  name: "xinle-price-dashboard-runtime", version: "1.2.0", private: true, type: "module",
+  name: "xinle-price-dashboard-runtime", version: "1.3.0", private: true, type: "module",
   dependencies: { patchright: patchrightPackage.version },
 }, null, 2));
 await fs.writeFile(path.join(staging, "build-manifest.json"), JSON.stringify({
-  version: "1.2.0", platform: "win-x64", desktop: "electron", collectionMode: "headless", builtAt: new Date().toISOString(),
+  version: "1.3.0", platform: "win-x64", desktop: "electron", collectionMode: "headless", builtAt: new Date().toISOString(),
   node: process.version, patchright: patchrightPackage.version,
   chromium: browser.browserVersion, chromiumRevision: browser.revision,
   containsCredentials: false, containsUserData: false,

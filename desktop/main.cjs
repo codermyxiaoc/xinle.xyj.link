@@ -168,7 +168,7 @@ async function createWindow(url) {
   dashboardSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
   dashboardSession.setPermissionCheckHandler(() => false);
   dashboardSession.webRequest.onBeforeRequest((details, callback) => {
-    const allowed = details.url === 'about:blank' || details.url.startsWith(url + '/');
+    const allowed = details.url === 'about:blank' || details.url.startsWith(url + '/') || details.url.startsWith('blob:' + url + '/');
     callback({ cancel: !allowed });
   });
   window = new BrowserWindow({
@@ -195,10 +195,17 @@ async function createWindow(url) {
   });
   window.once('ready-to-show', () => { if (!quitting) window.show(); });
   window.on('closed', () => { window = null; void shutdown(); });
-  // Electron 自带下载保存对话框，导出仍由 /api/download 返回的文件名决定。
+  // 下载仅来自本地看板（含其生成的 Blob），按文件格式提供对应保存选项。
   dashboardSession.on('will-download', (_event, item) => {
     if (!sameOrigin(item.getURL())) { item.cancel(); return; }
-    item.setSaveDialogOptions({ title: '导出价格 JSON', defaultPath: 'ticket-prices.json', filters: [{ name: 'JSON 数据', extensions: ['json'] }] });
+    const filename = path.basename(item.getFilename());
+    const excel = /\.xlsx$/i.test(filename);
+    if (!excel && !/\.json$/i.test(filename)) { item.cancel(); return; }
+    item.setSaveDialogOptions({
+      title: excel ? '导出渠道每日最低价 Excel' : '导出价格 JSON',
+      defaultPath: filename,
+      filters: [{ name: excel ? 'Excel 工作簿' : 'JSON 数据', extensions: [excel ? 'xlsx' : 'json'] }],
+    });
   });
   await window.loadURL(url + '/');
 }

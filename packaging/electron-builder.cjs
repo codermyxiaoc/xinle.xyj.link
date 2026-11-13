@@ -21,7 +21,7 @@ module.exports = {
   ],
   afterPack: async ({ appOutDir }) => {
     const runtime = path.join(appOutDir, "resources", "runtime");
-    for (const file of ["runtime/node.exe", "browser/chrome-win64/chrome.exe", "node_modules/patchright/package.json", "node_modules/patchright-core/package.json", "lib/ticket-type-config.ts"]) {
+    for (const file of ["runtime/node.exe", "browser/chrome-win64/chrome.exe", "node_modules/patchright/package.json", "node_modules/patchright-core/package.json", "lib/ticket-type-config.ts", "lib/price-excel.ts", "lib/xlsx.ts"]) {
       await fs.access(path.join(runtime, file));
     }
     for (const file of ["config/login.json", "config/ticket-types.json", ".env.local", "output/ticket-prices.json"]) {

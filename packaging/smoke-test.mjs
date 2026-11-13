@@ -167,22 +167,24 @@ try {
     console.log(`EXE 无头直连采集成功：${prices.summary.productCount} 个渠道，${priceCount} 条日价；采集期间无浏览器窗口。`);
     if (prices.products?.["1036"]) {
       assert.equal(prices.products["1036"].sourceTicketType ?? prices.products["1036"].ticketType, "CHILDREN");
-      const settings = await post("/api/ticket-types", { overrides: { "1036": "adult" } });
-      assert.equal(settings.overrides["1036"], "adult");
+      assert.equal(prices.products["1036"].group, "other", "接口与名称冲突的票种应等待本地设置。");
+      const settings = await post("/api/ticket-types", { overrides: { "1036": "adult_1d" } });
+      assert.equal(settings.overrides["1036"], "adult_1d");
       overriddenPrices = (await get("/api/prices")).data;
       const exported = (await get("/api/download")).data;
       const persisted = JSON.parse(await fs.readFile(path.join(session.dataDirectory, "output", "ticket-prices.json"), "utf8"));
       for (const snapshot of [overriddenPrices, exported, persisted]) {
-        assert.equal(snapshot.products["1036"].group, "adult");
+        assert.equal(snapshot.products["1036"].group, "adult_1d");
+        assert.equal(snapshot.products["1036"].visitDays, 1);
         assert.equal(snapshot.products["1036"].ticketType, "ADULT");
         assert.equal(snapshot.products["1036"].sourceTicketType, "CHILDREN");
         assert.equal(snapshot.products["1036"].ticketTypeSource, "local");
         assert.equal(snapshot.summary.priceCount, priceCount);
-        assert.deepEqual(snapshot.prices.adult["1036"], prices.prices.children["1036"]);
-        assert.equal("1036" in snapshot.prices.children, false);
+        assert.deepEqual(snapshot.prices.adult_1d["1036"], prices.prices.other["1036"]);
+        assert.equal("1036" in snapshot.prices.other, false);
       }
       localTicketTypeVerified = true;
-      console.log("1036 本地成人票覆盖已同步到看板、JSON 下载与持久化文件，日价数量及金额保持一致。");
+      console.log("1036 本地1日成人覆盖已同步到看板、JSON 下载与持久化文件，日价数量及金额保持一致。");
     }
   }
   await stop();
@@ -192,16 +194,16 @@ try {
   assert.deepEqual((await get("/api/login-config")).data, { username: credentials.username, hasPassword: true });
   if (withRefresh) assert.equal((await get("/api/prices")).data.summary.priceCount, priceCount);
   if (localTicketTypeVerified) {
-    assert.equal((await get("/api/ticket-types")).data.overrides["1036"], "adult");
-    assert.equal((await get("/api/prices")).data.products["1036"].group, "adult");
+    assert.equal((await get("/api/ticket-types")).data.overrides["1036"], "adult_1d");
+    assert.equal((await get("/api/prices")).data.products["1036"].group, "adult_1d");
     const restored = await post("/api/ticket-types", { overrides: { "1036": null } });
     assert.equal("1036" in restored.overrides, false);
     const resetPrices = (await get("/api/prices")).data;
-    assert.equal(resetPrices.products["1036"].group, "children");
+    assert.equal(resetPrices.products["1036"].group, "other");
     assert.equal(resetPrices.products["1036"].ticketType, "CHILDREN");
     assert.equal(resetPrices.products["1036"].ticketTypeSource, "remote");
     assert.equal(resetPrices.summary.priceCount, priceCount);
-    assert.deepEqual(resetPrices.prices.children["1036"], overriddenPrices.prices.adult["1036"]);
+    assert.deepEqual(resetPrices.prices.other["1036"], overriddenPrices.prices.adult_1d["1036"]);
   }
   await stop();
   const report = { passed: true, electronVersion: session.electronVersion, firstRunClean: true, bundledRuntimeVerified: true, singleInstance: true, persistenceAfterRestart: true, shutdownCleanup: true, withRefresh, headlessVerified, directVerified, localTicketTypeVerified, observedBrowserProcesses: observedBrowserPids.size, priceCount, testRoot, testedAt: new Date().toISOString() };

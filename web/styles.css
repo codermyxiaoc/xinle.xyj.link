@@ -29,3 +29,96 @@
 @media(max-width:1100px){.custom-select{min-width:137px}}
 @media(max-width:820px){.custom-select{min-width:0}}
 @media(max-width:580px){.custom-select{width:100%;margin-top:7px}.custom-select-trigger{font-size:11px;min-height:36px;padding:8px 10px;gap:10px}.custom-select-option{font-size:12px;min-height:42px;padding:10px 13px;gap:17px}}
+
+/* 地区与游玩时长分别筛选，任何渠道排名都限制在同一景区内。 */
+.summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.summary-card{min-width:0}
+.filter-bar{flex-wrap:wrap}
+.filter-selects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;width:100%;max-width:720px}
+.destination-filter-row{display:flex;align-items:center;gap:12px;width:100%;min-width:0}
+.destination-filter-row>span{font-size:12px;color:#7b8b81;white-space:nowrap}
+.destination-tabs{min-width:0;max-width:100%}
+.filter-selects label{min-width:0;white-space:nowrap}
+.custom-select{min-width:0}
+.custom-select-value{overflow:hidden;text-overflow:ellipsis}
+.custom-select-option-label{white-space:normal;overflow-wrap:anywhere}
+.segmented{flex-wrap:wrap}
+.day-destinations{min-width:0;display:grid;gap:22px}
+.destination-section{min-width:0}
+.destination-heading{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;line-height:1.6;margin:0 0 10px;color:#52715f;overflow-wrap:anywhere}
+.destination-heading::before{content:"";width:4px;height:15px;background:#a8c5b5;border-radius:4px;flex-shrink:0}
+.ticket-title{flex-wrap:wrap}
+.ticket-header{gap:10px}
+.price-order-label{flex-shrink:0}
+.other-card{grid-column:1/-1}
+.other-card .type-icon{color:#a77d3c;background:#fcf2df}
+.other-card .ticket-header{background:#fffcf5}
+.other-card .price-order-label{color:#a18b64}
+.pending-type-action{border:1px solid #dce8df;border-radius:5px;background:#f0f6f1;color:#457259;font:inherit;font-size:11px;line-height:1.5;padding:3px 8px}
+.pending-type-action:hover{background:#e4f0e8;border-color:#b5cdbf}
+.empty-state .pending-type-action{margin-top:12px;padding:8px 15px}
+@media(max-width:1100px){.filter-selects{gap:14px}.filter-selects label{display:block}.filter-selects .custom-select{margin-top:7px}}
+@media(max-width:820px){.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.filter-selects{grid-template-columns:repeat(2,minmax(0,1fr))}.segmented{align-self:stretch}.segmented button{flex:1}.day-destinations{gap:17px}}
+@media(max-width:580px){.segmented{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.segmented button{padding:9px 5px}.destination-heading{font-size:13px;margin-bottom:9px}.ticket-header{padding-left:14px;padding-right:14px}.ticket-title{gap:6px}.other-card .price-order-label{font-size:9px}.results-line{flex-wrap:wrap}.summary-card small{overflow-wrap:anywhere}.custom-select-menu{max-width:calc(100vw - 64px)}}
+
+/* 每个旅游地区、每种票种各自展示月历最低报价。 */
+.section-heading:has(.view-mode){flex-wrap:wrap;align-items:center}
+.comparison-view-controls{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:12px 17px;margin-left:auto}
+.comparison-view-controls .sort-note{margin:0}
+.view-mode{flex:none;align-self:center;margin-left:auto;border:1px solid #e3eae5;background:#edf2ee}
+.view-mode button{min-width:70px;padding:9px 15px}
+.calendar-view{min-width:0;display:grid;gap:25px}
+.calendar-toolbar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px 18px;padding:17px 21px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
+.calendar-month-title{margin:0;min-width:150px;font-size:18px;font-weight:600;line-height:1.6;text-align:center;color:#365949;font-variant-numeric:tabular-nums}
+.calendar-month-prev,.calendar-month-next{display:inline-flex;align-items:center;justify-content:center;min-width:35px;min-height:35px;border:1px solid #dfe8e1;border-radius:7px;padding:6px 10px;background:#fff;color:var(--green);font:inherit;font-size:16px;line-height:1;transition:background .15s,border-color .15s}
+.calendar-month-prev:hover,.calendar-month-next:hover{background:#edf5ef;border-color:#b7cebf}
+.calendar-month-prev:disabled,.calendar-month-next:disabled{color:#bbc4be;background:#fafbf9;border-color:#eaf0eb;cursor:default}
+.calendar-help{flex-basis:100%;margin:0;text-align:center;font-size:11px;line-height:1.8;color:#8a998e}
+.calendar-destination{min-width:0}
+.calendar-destination>.destination-heading{margin-bottom:13px}
+.calendar-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
+.calendar-cards.single-type{grid-template-columns:minmax(0,1fr)}
+.price-calendar{--calendar-accent:var(--green);--calendar-soft:var(--green-soft);--calendar-hover:#e1efe6;min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
+.price-calendar[data-group^="children"]{--calendar-accent:var(--child);--calendar-soft:var(--child-soft);--calendar-hover:#f9ebd7}
+.calendar-card-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 19px;border-bottom:1px solid #edf1ee}
+.calendar-card-header h4{display:flex;align-items:center;gap:8px;margin:0;color:var(--text);font-size:14px;font-weight:600;line-height:1.6}
+.calendar-card-header .type-icon{background:var(--calendar-soft);color:var(--calendar-accent);flex-shrink:0}
+.calendar-card-caption{font-size:10px;color:#94a297;line-height:1.6;text-align:right}
+.calendar-weekdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;padding:13px 12px 8px;font-size:11px;line-height:1.6;color:#97a39b;text-align:center}
+.calendar-weekdays>span:first-child,.calendar-weekdays>span:last-child{color:#b28a57}
+.calendar-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;padding:0 12px 12px}
+.calendar-day,.calendar-blank{min-width:0;min-height:72px;border:1px solid transparent;border-radius:8px}
+.calendar-day{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:8px 2px;background:#f8faf7;color:#526b5d;font:inherit;text-align:center;line-height:1.2;font-variant-numeric:tabular-nums;transition:background .15s,border-color .15s,color .15s}
+.calendar-day-number{font-size:13px;font-weight:500;line-height:1.3}
+.calendar-day-number.is-weekend,.calendar-day.is-weekend .calendar-day-number{color:#ae8250}
+.calendar-day-price{display:block;max-width:100%;font-size:12px;font-weight:600;letter-spacing:-.25px;color:var(--calendar-accent);white-space:nowrap}
+.calendar-day-empty{font-size:10px;color:#b2bbb4}
+.calendar-day.has-price{background:var(--calendar-soft)}
+.calendar-day.is-month-lowest:not(:disabled){border-color:color-mix(in srgb,var(--calendar-accent) 28%,transparent)}
+.calendar-day:not(:disabled):hover{background:var(--calendar-hover);border-color:color-mix(in srgb,var(--calendar-accent) 40%,transparent)}
+.calendar-day:focus-visible{z-index:1;outline:2px solid var(--calendar-accent);outline-offset:1px}
+.calendar-day.is-today .calendar-day-number{font-weight:700;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.calendar-day.is-selected:not(:disabled){background:var(--calendar-accent);border-color:var(--calendar-accent);box-shadow:0 2px 5px #213b2a17}
+.calendar-day.is-selected:not(:disabled) .calendar-day-number,.calendar-day.is-selected:not(:disabled) .calendar-day-price{color:#fff}
+.calendar-day:disabled{cursor:default;background:#fbfcfa;color:#bec6bf}
+.calendar-day:disabled .calendar-day-number{color:#b4beb6}
+.calendar-selection{min-width:0;margin-top:23px;padding-top:24px;border-top:1px solid #dfe7e1}
+.calendar-selection>h3{display:inline-block;margin:0 12px 18px 0;color:#365949;font-size:17px;line-height:1.7;font-weight:600}
+.calendar-clear{float:right;display:inline-flex;align-items:center;justify-content:center;border:1px solid #d9e5dc;border-radius:7px;background:#fff;color:#66826e;padding:7px 12px;margin-bottom:17px;font:inherit;font-size:11px;line-height:1.5}
+.calendar-clear:hover{background:#edf5ef;border-color:#b8cdbf}
+.calendar-selection>.daily-list{clear:both}
+@media(max-width:1100px){.calendar-card-header{padding:14px 15px}.calendar-day-price{font-size:11px}.calendar-day,.calendar-blank{min-height:66px}.calendar-cards{gap:14px}}
+@media(max-width:820px){.calendar-cards{grid-template-columns:minmax(0,1fr);gap:15px}.calendar-day-price{font-size:12px}.calendar-day,.calendar-blank{min-height:73px}.calendar-view{gap:21px}.calendar-selection>h3{font-size:16px}}
+@media(max-width:580px){.view-mode{display:flex;flex-wrap:nowrap;gap:3px;padding:4px}.view-mode button{flex:initial;min-width:52px;padding:8px 11px;font-size:11px}.calendar-toolbar{gap:10px 15px;padding:14px 13px}.calendar-month-title{font-size:16px;min-width:130px}.calendar-help{font-size:10px}.calendar-month-prev,.calendar-month-next{min-width:32px;min-height:32px}.calendar-card-header{padding:13px 12px;gap:7px}.calendar-card-header h4{font-size:13px;gap:6px}.calendar-card-caption{font-size:9px}.calendar-weekdays{padding:11px 8px 7px;gap:3px;font-size:10px}.calendar-days{padding:0 8px 8px;gap:3px}.calendar-day,.calendar-blank{min-height:62px;border-radius:6px}.calendar-day{gap:8px;padding:8px 1px}.calendar-day-number{font-size:12px}.calendar-day-price{font-size:10px;letter-spacing:-.4px}.calendar-day-empty{font-size:9px}.calendar-selection{margin-top:19px;padding-top:19px}.calendar-selection>h3{font-size:14px;max-width:calc(100% - 95px);margin-right:5px}.calendar-clear{padding:6px 9px;font-size:10px}}
+@media(max-width:580px){.destination-filter-row{align-items:stretch;flex-direction:column;gap:8px}.destination-tabs{grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.destination-tabs button{white-space:normal;overflow-wrap:anywhere}}
+.topbar{gap:16px}
+.topbar-right{min-width:0}
+.export-controls{position:relative;display:flex;align-items:center;gap:17px;flex-shrink:0}
+.export-controls .download-link{white-space:nowrap}
+.excel-export-button{min-width:103px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #c8ddd0;border-radius:7px;background:#edf5ef;color:var(--green);padding:9px 13px;font:inherit;font-size:12px;font-weight:500;line-height:1.5;white-space:nowrap;transition:background .15s,border-color .15s}
+.excel-export-button:hover{background:#dfede3;border-color:#a8c7b5}
+.excel-export-button:disabled{background:#f1f5f1;color:#91a397;border-color:#dce6df;cursor:wait}
+.excel-export-feedback{position:absolute;top:calc(100% + 8px);right:0;z-index:40;width:max-content;max-width:min(350px,calc(100vw - 38px));margin:0;padding:9px 12px;border:1px solid #d4e4d9;border-radius:8px;background:#f4faf5;box-shadow:0 4px 14px #23422d0d;color:#5b7b64;font-size:11px;line-height:1.7;white-space:normal;overflow-wrap:anywhere}
+.excel-export-feedback.is-error{border-color:#ebd4c1;background:#fff8ef;color:#a5744c}
+@media(max-width:820px){.topbar-right{gap:12px}.export-controls{gap:12px}}
+@media(max-width:580px){.topbar{gap:10px}.export-controls{gap:10px}.excel-export-button{min-width:78px;padding:7px 9px;font-size:11px}.export-controls .download-link span{display:none}.excel-export-feedback{font-size:10px;padding:8px 10px}.topbar-right{flex-shrink:0}}

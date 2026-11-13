@@ -8,7 +8,7 @@ import { persistPriceExport } from "../lib/price-store.ts";
 
 function fixture(price = 331.85) {
   const product = normalizeProduct({
-    goods_id: 1023, goods_name: '成人票,"测试"', ticket_type: "ADULT",
+    goods_id: 1023, goods_name: '1日成人票,"测试"', ticket_type: "ADULT",
     spot_id: 1040, spot_name: "北京环球度假区",
   });
   return {
@@ -39,8 +39,11 @@ test("完整结果持久化为可读取 JSON 和带 BOM 的 UTF-8 CSV", async (t
   assert.deepEqual(JSON.parse(await readFile(paths.byMonth, "utf8")), data.dayNumbers);
   const csv = await readFile(paths.csv);
   assert.deepEqual([...csv.subarray(0, 3)], [0xef, 0xbb, 0xbf]);
-  assert.ok(csv.toString("utf8").includes('"成人票,""测试"""'));
+  assert.ok(csv.toString("utf8").includes('"1日成人票,""测试"""'));
   assert.ok(csv.toString("utf8").includes('"北京环球度假区"'));
+  assert.ok(csv.toString("utf8").includes('"1日成人"'));
+  assert.ok(csv.toString("utf8").includes('"spot:1040"'));
+  assert.ok(csv.toString("utf8").includes('"游玩天数"'));
   assert.equal(csv.toString("utf8").split("\r\n").length, 3);
 });
 

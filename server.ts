@@ -7,6 +7,7 @@ import { getLoginConfigMetadata, saveLoginConfig } from "./lib/login-config.ts";
 import { resolveRuntimePaths } from "./lib/runtime-paths.ts";
 import { applyTicketTypeOverrides, readTicketTypeOverrides, saveTicketTypeOverrides } from "./lib/ticket-type-config.ts";
 import { persistPriceExport } from "./lib/price-store.ts";
+import { buildPriceWorkbook } from "./lib/price-excel.ts";
 
 const projectDir = fileURLToPath(new URL("./", import.meta.url));
 type Progress = { current: number; total: number };
@@ -112,7 +113,8 @@ export function createDashboardServer(options: {
     const effective = applyTicketTypeOverrides(original, overrides);
     const hasLocalTypes = Object.keys(overrides).length > 0 ||
       Object.values(original.products).some((product: any) => product.ticketTypeSource === "local");
-    if (hasLocalTypes && JSON.stringify(original) !== JSON.stringify(effective)) {
+    const needsSchemaUpgrade = original.schemaVersion !== effective.schemaVersion;
+    if ((hasLocalTypes || needsSchemaUpgrade) && JSON.stringify(original) !== JSON.stringify(effective)) {
       await persistPriceExport(effective, outputDir);
     }
     return effective;
@@ -126,6 +128,10 @@ export function createDashboardServer(options: {
       goodsId: product.goodsId, name: product.name,
       sourceTicketType: product.sourceTicketType ?? product.ticketType,
       sourceGroup: product.sourceGroup ?? product.group,
+      spotId: product.spotId ?? null, spotName: product.spotName ?? "",
+      destinationKey: product.destinationKey, destinationName: product.destinationName,
+      visitDays: product.visitDays ?? null,
+      classificationReason: product.classificationReason ?? null,
       group: product.group, override: overrides[String(product.goodsId)] ?? null,
     })).sort((a, b) => a.goodsId - b.goodsId);
     return { overrides, products };
@@ -241,6 +247,25 @@ export function createDashboardServer(options: {
         } catch (error: any) {
           return json(error.code === "ENOENT" ? 404 : 500, {
             error: error.code === "ENOENT" ? "还没有价格数据，请点击手动刷新。" : "价格文件读取失败，请尝试刷新。",
+          });
+        }
+      }
+      if (req.method === "GET" && url.pathname === "/api/export.xlsx") {
+        try {
+          // 与看板共用读取路径，按渠道 ID 应用最新本地票种后再导出。
+          const data = await snapshot();
+          const workbook = buildPriceWorkbook(data);
+          const date = data.fetchedAt.slice(0, 10);
+          const filename = `渠道每日最低价-${date}.xlsx`;
+          res.writeHead(200, {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": `attachment; filename="ticket-prices-${date}.xlsx"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+            "Content-Length": workbook.length,
+          });
+          return res.end(workbook);
+        } catch (error: any) {
+          return json(error.code === "ENOENT" ? 404 : 500, {
+            error: error.code === "ENOENT" ? "还没有价格数据，请先手动刷新后再导出。" : "Excel 导出失败，请检查价格数据或刷新后重试。",
           });
         }
       }
